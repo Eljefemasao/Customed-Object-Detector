@@ -3,7 +3,8 @@
 <h2>Single Shot Multi-Box Detector</h2>
 
 <div>
-Those codes are derived from the following.
+  Those codes are derived from the following.<br>
+  https://github.com/rykov8/ssd_keras
 </div>
 
 <div>
