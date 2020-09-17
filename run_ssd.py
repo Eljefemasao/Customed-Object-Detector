@@ -96,25 +96,26 @@ def pil2cv(image):
 
 # テスト用画像の呼び出しと推論
 path_ = sortedStringList(path)
-test5 = pickle.load(open('/Users/matsunagamasaaki/MasterResearch/ssd_keras/VOC_piece1.pkl', 'rb'))
-keys = test5.keys()
-ground_truth = test5.values()
+
+# 検出精度(AP)を出すためground truthもこの形式で取得している
+test_images = pickle.load(open('/Users/matsunagamasaaki/MasterResearch/ssd_keras/VOC_cup1.pkl', 'rb'))
+keys = test_images.keys()
+ground_truth = test_images.values()
 
 accum_time = 0
 curr_fps = 0
 fps = "FPS: " + str(curr_fps)
 prev_time = timer()
+
 for idx, _ in zip(keys, ground_truth):
 
-    gt_ = test5[idx]
+    gt_ = test_images[idx]
     inputs = []
     images = []
     img_path = idx  #中身"/Users/matsunagamasaaki/MasterResearch/fragment_annotation/data5/data/frames_in/0/0/44.jpg"
     img = image.load_img(img_path, target_size=(300, 300))
-
     img = image.img_to_array(img)
-#    img = cv2.resize(img, (300, 300))
-    print(img)
+
     images.append(imread(img_path))
     inputs.append(img.copy())
     inputs = preprocess_input(np.array(inputs))
@@ -123,10 +124,9 @@ for idx, _ in zip(keys, ground_truth):
     preds = model.predict(inputs, batch_size=1, verbose=1)
     results = bbox_util.detection_out(preds)
 
+    # ground truthboxの取得
     voc_classes = ["background", "A", "B", "C", "D", "E"]
     result = {'A': [], 'B': [], 'C': [], 'D': [], 'E': []}
-
-
     for i in gt_:
         if list(i[4:]) == [0,1,0,0,0,0]:
             label = voc_classes[0]
@@ -179,7 +179,8 @@ for idx, _ in zip(keys, ground_truth):
     gt_xmax = gt_[:, 2]
     gt_ymax = gt_[:, 3]
 
-    detection = {'background': [], 'A': [], 'B': [], 'C': [], 'D': [], 'E': []}
+#    detection = {'background': [], 'A': [], 'B': [], 'C': [], 'D': [], 'E': []}
+    detection = {"background":[] ,"A":[], "B":[]}
 
 
     # hsv color
@@ -193,7 +194,8 @@ for idx, _ in zip(keys, ground_truth):
         xmax = int(round(top_xmax[i] * img.shape[1]))
         ymax = int(round(top_ymax[i] * img.shape[0]))
         score = top_conf[i]
-        voc_classes = ["background","A", "B", "C", "D", "E"]
+       # voc_classes = ["background","A", "B", "C", "D", "E"]
+        voc_classes = ["A","B"]
         label = int(top_label_indices[i])
         print(top_label_indices)
         label_name = voc_classes[label]
@@ -252,27 +254,15 @@ for idx, _ in zip(keys, ground_truth):
             ymin = int(round(top_ymin[i] * img.shape[0]))
             xmax = int(round(top_xmax[i] * img.shape[1]))
             ymax = int(round(top_ymax[i] * img.shape[0]))
+
+            # 推論結果の記述(score及びカテゴリ)
             score = top_conf[i]
-            voc_classes = ["background","A", "B", "C", "D", "E"]
+            voc_classes = ["A","B"]
 
             label = int(top_label_indices[i])
             print(top_label_indices)
             label_name = voc_classes[label]
             
-
-            """
-            if label_name is "pieceA":
-                box_color = (0, 255, 0)
-            elif "pieceB":
-                box_color = (0, 255, 255)
-            elif "pieceC":
-                box_color = (255, 255, 0)
-            elif "pieceD":
-                box_color = (0, 0, 255)
-            elif "pieceE":
-                box_color = (255, 0, 0)
-            """
-
             if label_name is "cupA":
                 box_color = (0,255,0)
             elif "cupB":
@@ -281,7 +271,7 @@ for idx, _ in zip(keys, ground_truth):
 
             display_txt = '{:0.2f}, {}'.format(score, label_name)
             coords = (xmin, ymin), xmax - xmin + 1, ymax - ymin + 1
-            # currentAxis.add_patch(plt.Rectangle(*coords,fill=False, edgecolor='white',linewidth=2))
+#            currentAxis.add_patch(plt.Rectangle(*coords,fill=False, edgecolor='white',linewidth=2))
 
 
             g_xmin=[int(round(i)) for i in gt_xmin * img.shape[1]]
