@@ -85,9 +85,17 @@ class Gradcam:
         return imgArray 
 
 
-    def grad_cam(self, input_model, image, category_index, layer_name):
+    def grad_cam(self, input_model, image, category_index, layer_name, boxcoords):
         
-        nb_classes = 6#18
+        nb_classes = 2#6#18
+
+        # bounding box boords
+        xmin=boxcoords[0]
+        ymin=boxcoords[1]
+        xmax=boxcoords[2]
+        ymax=boxcoords[3]
+
+
         target_layer = lambda x: self.target_category_loss(x, category_index, nb_classes)
 
         # レイヤー指定
@@ -95,17 +103,16 @@ class Gradcam:
         x = Lambda(target_layer, output_shape=self.target_category_loss_output_shape)(x)
         model = keras.models.Model(input_model.layers[0].input, x)
 
-        conv_output =model.layers[9].output #model.layers[5].output 
-        print(conv_output)
+        conv_output =model.layers[-38].output #model.layers[5].output 
         #print(conv_output =  [l for l in input_model.layers if l.name == layer_name][0].output)
-        
+
         loss = KTF.sum(model.layers[-3].output)
-        print("~~~~~~")
 
         grads = self.normalize(KTF.gradients(loss, conv_output)[0])
         gradient_function = KTF.function([model.layers[0].input], [conv_output, grads])
         output, grads_val = gradient_function([image])
         output, grads_val = output[0, :], grads_val[0, :, :, :]
+
         #多分GAP
         weights = np.mean(grads_val, axis = (0, 1))
         cam = np.ones(output.shape[0 : 2], dtype = np.float32)
@@ -123,10 +130,30 @@ class Gradcam:
         image = np.minimum(image, 255)
 
         cam1 = cv2.applyColorMap(np.uint8(255*heatmap), cv2.COLORMAP_JET)
+
+        # boundingbox以外のヒートマップ領域を消す
+        cam1 = cv2.resize(cam1, (720, 405))
+        cam1[:,0:xmin, :] = 0 # left
+        cam1[0:ymin,:,:] = 0 # top
+        cam1[ymax:-1,:,:] = 0 # bottom
+        cam1[:,xmax:-1,:] = 0
+        print('PPPPPPPPP', np.shape(cam1))
+        cam1 = cv2.resize(cam1, (300,300))
+
+
+        heatmap = cv2.resize(heatmap, (720, 405))
+        heatmap[:,0:xmin] = 0 # left
+        heatmap[0:ymin,:] = 0 # top
+        heatmap[ymax:-1,:] = 0 # bottom
+        heatmap[:,xmax:-1] = 0
+        heatmap = cv2.resize(heatmap, (300,300))
+
+
+
+        # 視認性を上げるため入力画像を重ねる
         cam = np.float32(cam1) + np.float32(255*image)
         cam = 255 * cam / np.max(cam)
-#        cv.imshow('gradcam', cam1)
-#        cv2.imwrite("heat.jpg",cam1)
+
         return np.uint8(cam), heatmap
 
         
@@ -158,6 +185,7 @@ class Gradcam:
             def _GuidedBackProp(op, grad):
                 dtype = op.inputs[0].dtype
                 return grad * tf.cast(grad > 0., dtype) *  tf.cast(op.inputs[0] > 0., dtype)
+
 
     def compile_saliency_function(self, model, activation_layer='conv8_2'):
 
@@ -216,19 +244,9 @@ class Gradcam:
         return x
 
 
-    def conduct_gradcam(self, model, img):
+    def conduct_gradcam(self, model, img, score, boxcoords, label_list, box_color, label_name):
 
     #    Grad-CAMの実行
-
-#        url="/home/seimei/Graduation_Research/dataset_valid/hare/class_B5/image_0104.jpg"
-        #"/home/seimei/Graduation_Research/dataset/hare/hare_D2/image_0049.jpg"
-    #"/home/seimei/Graduation_Research/dataset_valid/hare/class_B5/image_0019.jpg"
-    #"/home/seimei/Graduation_Research/dataset/hare/hare_D2/image_0037.jpg"
-    #'/home/seimei/Graduation_Research/dataset/kumori/kumori_D2/image_0001.jpg'  なるほどね
-    #"/home/seimei/Graduation_Research/dataset_valid/hare/hare_D4/image_0189.jpg"
-    #"/home/seimei/Graduation_Research/dataset_valid/hare/class_B5/image_0019.jpg"
-    #"/home/seimei/Graduation_Research/dataset_valid/hare/hare_D4/image_0024.jpg"
-
 #        img = image.img_to_array(img_to_matrix(url))
 #        img.astype('float32')
        # img /= 255.0
@@ -236,34 +254,47 @@ class Gradcam:
         img = np.expand_dims(img,axis=0)
         # preprocessed_input = load_image("/home/seimei/image_0058_brush.jpg")
         predictions=model.predict(img)#np.expand_dims(img, axis=0))
-
-        predicted_class= np.argmax(predictions)
-
+        predicted_class= np.argmax(label_list)# np.argmax(predictions)
+        print('score', score)
+        print(label_list)
         print(predicted_class)
-        print(predictions)
+        # モデルのレイヤ確認
         for i in model.layers:
             print('ssssssss',i.name)
-        cam, heatmap = self.grad_cam(model, img, predicted_class, "conv8_2")
+
+        cam, heatmap = self.grad_cam(model, img, predicted_class, "conv8_2", boxcoords)
         cam_ = cv2.resize(cam,(720,405))
+
+        # bounding box boords
+        xmin=boxcoords[0]
+        ymin=boxcoords[1]
+        xmax=boxcoords[2]
+        ymax=boxcoords[3]
+
+        # boundingbox 表示        
+        cam_ = cv2.rectangle(cam_, (xmin, ymin), (xmax, ymax), (85, 255, 0), 1)
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        #center = (int(round(xmax - xmin + 1) / 2 + xmin), int(round(ymax - ymin + 1) / 2 + ymin))
+        top = (int(round(xmin)),int(ymin-1))
+        cv2.putText(cam_, label_name, top, font, 0.8, (0,255,0), 2, cv2.LINE_AA)
+
         cv2.imshow("cam",cam_)
         heatmap_ = cv2.resize(heatmap,(720,405))
-        cv2.imshow("heatmap",heatmap_)
-#        cv2.imwrite("gradcam.jpg", cam)
-#        cv2.imwrite("test_heatmap.jpg", heatmap)
+
+
+        resized_img =  cv2.resize(img[0], (720,405))
         self.register_gradient()
         guided_model = self.modify_backprop(model, 'GuidedBackProp')
         saliency_fn = self.compile_saliency_function(guided_model)
+
         saliency = saliency_fn([img,0])#[np.expand_dims(img, axis=0), 0])
-        print(saliency)
-        gradcam = saliency[0] * heatmap[..., np.newaxis]
+
+        gradcam = saliency[0] * heatmap[..., np.newaxis] 
         gradcam = cv2.resize(gradcam[0],(720,405))
-        print(np.shape(gradcam))
-        cv2.imshow('+backprop', gradcam)
-#        cv2.imwrite("backprop.jpg",gradcam)
-        #  print(type(gradcam))
-        guided_gradcam = cv2.resize(self.deprocess_image(gradcam),(720,405))
+
+#        cv2.imshow('+backprop', gradcam)
+        guided_gradcam = cv2.resize(self.deprocess_image(gradcam),(720, 405))#+ np.uint8(reised_img),(720,405))
         cv2.imshow("guided_gradcam", guided_gradcam)
-#        cv2.imwrite("guided_gradcam.jpg", deprocess_image(gradcam))
-#        cv2.waitKey(1)
+
 
 
