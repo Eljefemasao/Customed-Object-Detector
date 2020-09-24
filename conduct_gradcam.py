@@ -187,7 +187,7 @@ class Gradcam:
                 return grad * tf.cast(grad > 0., dtype) *  tf.cast(op.inputs[0] > 0., dtype)
 
 
-    def compile_saliency_function(self, model, activation_layer='conv8_2'):
+    def compile_saliency_function(self, model, activation_layer='conv7_2'):
 
         input_img = model.input
         layer_dict = dict([(layer.name, layer) for layer in model.layers[1:]])
@@ -262,7 +262,7 @@ class Gradcam:
         for i in model.layers:
             print('ssssssss',i.name)
 
-        cam, heatmap = self.grad_cam(model, img, predicted_class, "conv8_2", boxcoords)
+        cam, heatmap = self.grad_cam(model, img, predicted_class, "conv7_2", boxcoords)
         cam_ = cv2.resize(cam,(720,405))
 
         # bounding box boords
@@ -289,6 +289,7 @@ class Gradcam:
 
         saliency = saliency_fn([img,0])#[np.expand_dims(img, axis=0), 0])
 
+#        cv2.imshow("Backpropagation", saliency)
         gradcam = saliency[0] * heatmap[..., np.newaxis] 
         gradcam = cv2.resize(gradcam[0],(720,405))
 
@@ -298,3 +299,4 @@ class Gradcam:
 
 
 
+            
