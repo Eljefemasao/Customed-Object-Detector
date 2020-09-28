@@ -4,14 +4,15 @@
 
 
 <div>
-  <h2>Files</h2>
+  <h2>Directory/File</h2>
   <ul>
-    <li>marknet_module/utils/create_dataset_csv.py: +dTtQzzDHMPwwvw-path+lsZ9BA-csv+MNUwoTCkMOtm+DBNUfowVw-</li>
+    <li>marknet_module/utils/create_dataset_csv.py: 学習用画像データpath集約csvファイルの書き出し</li>
   </ul>
 </div>
 
 
 <div>
+<h2>About SSD Base Code</h2>
   Those codes are derived from the following.<br>
   https://github.com/rykov8/ssd_keras
 </div>
