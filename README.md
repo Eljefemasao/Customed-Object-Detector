@@ -4,6 +4,8 @@
 <div>
 <h2>Single Shot Multi-Box Detector</h2>
   <img alt="er" src="/images/ssd_module.png">
+  <br>
+  <li><a href='https://arxiv.org/abs/1512.02325'>The paper is here</a></li>
 </div>
 
 <div>
