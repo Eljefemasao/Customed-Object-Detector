@@ -1,7 +1,10 @@
 
-<html>
-<h2>Single Shot Multi-Box Detector</h2>
 
+<html>
+<div>
+<h2>Single Shot Multi-Box Detector</h2>
+  <img alt="er" src="/images/ssd_module.png">
+</div>
 
 <div>
   <h2>Directory/File</h2>
@@ -21,7 +24,7 @@
   Those codes are derived from the following.<br>
   https://github.com/rykov8/ssd_keras
 </div>
-
+<br>
 <div>
 [![license](https://img.shields.io/github/license/mashape/apistatus.svg)](LICENSE)
 # A port of [SSD: Single Shot MultiBox Detector](https://github.com/weiliu89/caffe/tree/ssd) to [Keras](https://keras.io) framework.
