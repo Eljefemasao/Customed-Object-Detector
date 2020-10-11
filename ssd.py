@@ -1,6 +1,7 @@
 """Keras implementation of SSD."""
 
 import keras.backend as K
+import keras
 from keras.layers import Activation
 from keras.layers import AtrousConvolution2D
 from keras.layers import Convolution2D
@@ -133,8 +134,11 @@ def SSD300(input_shape, num_classes=21):
     net['conv8_2'] = Convolution2D(256, 3, 3, subsample=(2, 2),
                                    activation='relu', border_mode='same',
                                    name='conv8_2')(net['conv8_1'])
-    # Last Pool
+
+    # Last Pool 最終出力
     net['pool6'] = GlobalAveragePooling2D(name='pool6')(net['conv8_2'])
+
+
     # Prediction from conv4_3
     net['conv4_3_norm'] = Normalize(20, name='conv4_3_norm')(net['conv4_3'])
     num_priors = 3
@@ -155,6 +159,9 @@ def SSD300(input_shape, num_classes=21):
                         variances=[0.1, 0.1, 0.2, 0.2],
                         name='conv4_3_norm_mbox_priorbox')
     net['conv4_3_norm_mbox_priorbox'] = priorbox(net['conv4_3_norm'])
+
+
+
     # Prediction from fc7
     num_priors = 6
     net['fc7_mbox_loc'] = Convolution2D(num_priors * 4, 3, 3,
@@ -174,6 +181,9 @@ def SSD300(input_shape, num_classes=21):
                         variances=[0.1, 0.1, 0.2, 0.2],
                         name='fc7_mbox_priorbox')
     net['fc7_mbox_priorbox'] = priorbox(net['fc7'])
+
+
+
     # Prediction from conv6_2
     num_priors = 6
     x = Convolution2D(num_priors * 4, 3, 3, border_mode='same',
@@ -193,6 +203,9 @@ def SSD300(input_shape, num_classes=21):
                         variances=[0.1, 0.1, 0.2, 0.2],
                         name='conv6_2_mbox_priorbox')
     net['conv6_2_mbox_priorbox'] = priorbox(net['conv6_2'])
+
+
+
     # Prediction from conv7_2
     num_priors = 6
     x = Convolution2D(num_priors * 4, 3, 3, border_mode='same',
@@ -212,6 +225,8 @@ def SSD300(input_shape, num_classes=21):
                         variances=[0.1, 0.1, 0.2, 0.2],
                         name='conv7_2_mbox_priorbox')
     net['conv7_2_mbox_priorbox'] = priorbox(net['conv7_2'])
+
+
     # Prediction from conv8_2
     num_priors = 6
     x = Convolution2D(num_priors * 4, 3, 3, border_mode='same',
@@ -231,6 +246,8 @@ def SSD300(input_shape, num_classes=21):
                         variances=[0.1, 0.1, 0.2, 0.2],
                         name='conv8_2_mbox_priorbox')
     net['conv8_2_mbox_priorbox'] = priorbox(net['conv8_2'])
+
+
     # Prediction from pool6
     num_priors = 6
     x = Dense(num_priors * 4, name='pool6_mbox_loc_flat')(net['pool6'])
@@ -250,6 +267,9 @@ def SSD300(input_shape, num_classes=21):
     net['pool6_reshaped'] = Reshape(target_shape,
                                     name='pool6_reshaped')(net['pool6'])
     net['pool6_mbox_priorbox'] = priorbox(net['pool6_reshaped'])
+
+
+
     # Gather all predictions
     net['mbox_loc'] = concatenate([net['conv4_3_norm_mbox_loc_flat'],
                              net['fc7_mbox_loc_flat'],
@@ -287,4 +307,6 @@ def SSD300(input_shape, num_classes=21):
                                net['mbox_priorbox']],
                                axis=2,name='predictions')
     model = Model(net['input'], net['predictions'])
+     # モデルの構造プロット
+    keras.utils.plot_model(model, "./ssdmodel.png", show_shapes=True)
     return model
