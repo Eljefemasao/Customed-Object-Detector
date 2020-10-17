@@ -5,7 +5,14 @@
 <h2>Single Shot Multi-Box Detector: SSD</h2>
   <img alt="er" src="/images/ssd_module.png">
   <br>
-  <li><a href='https://arxiv.org/abs/1512.02325'>The paper is here</a></li>
+<li><a href='https://arxiv.org/abs/1512.02325'>The paper is here</a></li>
+<h3>How to train the network (process)</h3>
+<ul>
+  <li>Cover the 4,5,6,7,8th feature maps with default box(4 sets)=78000 for each category</li>
+  <li>Pinpoint the default box(4 sets) wich matches Ground Truth</li>
+  <li>Select one box from default box(4 sets) which has heigher rate than 0.5(IOU) from each feature maps</li>
+  <li>Finally, Overlap every selected box from 4,5,6,7,8th feature maps and extract prediction box by NMS.</li>
+</ul>
 </div>
 
 <div>
