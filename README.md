@@ -6,6 +6,7 @@
   <img alt="er" src="/images/ssd_module.png">
   <br>
 <li><a href='https://arxiv.org/abs/1512.02325'>The paper is here</a></li>
+
 <h3>How to train the network (process)</h3>
 <ul>
   <li>Cover the 4,5,6,7,8th feature maps with default box(4 sets)=78000 for each category</li>
@@ -13,6 +14,10 @@
   <li>Select one box from default box(4 sets) which has heigher rate than 0.5(IOU) from each feature maps</li>
   <li>Finally, Overlap every selected box from 4,5,6,7,8th feature maps and extract prediction box by NMS.</li>
 </ul>
+<h3>What is prior_boxes_ssd300.pkl</h3>
+<p>This is the file which contains every priro_box(default box) coordinates. There are 7308 boxes.<br>
+  Every box contains x_min, y_min, x_max, y_max, variance_1, variance2, variance3, variance_4.</p>
+
 </div>
 
 <div>
@@ -58,5 +63,6 @@ This code was tested with `Keras` v1.2.2, `Tensorflow` v1.0.0, `OpenCV` v3.1.0-d
 <ul>
   <li><a href='https://arxiv.org/abs/1512.02325'>SSD: Single Shot MultiBox Detector</a></li>
   <li><a href='https://arxiv.org/abs/1610.02391'>Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization</a></li>
+  
 </ul>
 </html>
