@@ -9,9 +9,8 @@
 
 <h3>How to train the network (process)</h3>
 <ul>
-  <li>Cover the 4,5,6,7,8th feature maps with default box(4 sets)=78000 for each category</li>
-  <li>Pinpoint the default box(4 sets) wich matches Ground Truth</li>
-  <li>Select one box from default box(4 sets) which has heigher rate than 0.5(IOU) from each feature maps</li>
+  <li>Cover the 4,5,6,7,8th feature maps with default box(4 sets)=7308(in paper 8732) for each category</li>
+  <li>Pinpoint the default box wich matches Ground Truth with IOU(heigher rate than 0.5)</li>
   <li>Finally, Overlap every selected box from 4,5,6,7,8th feature maps and extract prediction box by NMS.</li>
 </ul>
 <h3>What is prior_boxes_ssd300.pkl</h3>
