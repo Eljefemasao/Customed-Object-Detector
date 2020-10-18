@@ -21,7 +21,8 @@
 </div>
 
 <div>
-<h2>Gradinet-weighted Class Activation Mapping: Grad-CAM</h2>
+  <h2>Gradinet-weighted Class Activation Mapping: Grad-CAM</h2>
+  <img alt="er" src="/images/gradcam.png">
 <p>
 Gradient-weighted Class Activation Mapping(Grad-CAM)is an excellent visualization idea for understanding Convolutional Neural Network functions. As more detail explanation of this technique, It uses the gradients of any target concept(say logits for 'dog' or even a caption),flowing into the final convolutional layer to produce a coarse localization map highlighting important regions in an image for predicting the concept. Furthermore, By piling up these localization map onto Guided Backpropagation output, it realizes high level visualization system. There are roughly two algorithm flows. One is the Class Activation Mapping(CAM) and the other one is Guided BackPropagation. CAM is one of the funduamental idea for Grad-CAM.
 </p>
