@@ -10,8 +10,8 @@
 <h3>How to train the network (process)</h3>
 <ul>
   <li>Cover the 4,5,6,7,8th feature maps with default box(4 sets)=7308(in paper 8732) for each category</li>
-  <li>Pinpoint the default box wich matches Ground Truth with IOU(heigher rate than 0.5)</li>
-  <li>Finally, Overlap every selected box from 4,5,6,7,8th feature maps and extract prediction box by NMS.</li>
+  <li>Pinpoint the default box wich matches Ground Truth Box with IOU(heigher rate than 0.5)</li>
+  <li>Finally, Overlap every matched box from 4,5,6,7,8th feature maps and extract prediction box by NMS.</li>
 </ul>
 <h3>What is prior_boxes_ssd300.pkl</h3>
 <p>This is the file which contains every priro_box(default box) coordinates. There are 7308 boxes.<br>
