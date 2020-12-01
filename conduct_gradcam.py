@@ -87,7 +87,7 @@ class Gradcam:
 
     def grad_cam(self, input_model, image, category_index, layer_name, boxcoords):
         
-        nb_classes = 2#6#18
+        nb_classes = 5#6#18
 
         # bounding box boords
         xmin=boxcoords[0]
@@ -103,7 +103,7 @@ class Gradcam:
         x = Lambda(target_layer, output_shape=self.target_category_loss_output_shape)(x)
         model = keras.models.Model(input_model.layers[0].input, x)
 
-        conv_output =model.layers[-38].output #model.layers[5].output 
+        conv_output = model.layers[30].output #model.layers[5].output 
         #print(conv_output =  [l for l in input_model.layers if l.name == layer_name][0].output)
 
         loss = KTF.sum(model.layers[-3].output)
@@ -151,7 +151,7 @@ class Gradcam:
 
 
         # 視認性を上げるため入力画像を重ねる
-        cam = np.float32(cam1) + np.float32(255*image)
+        cam = np.float32(cam1) + np.float32(image)
         cam = 255 * cam / np.max(cam)
 
         return np.uint8(cam), heatmap
@@ -187,7 +187,7 @@ class Gradcam:
                 return grad * tf.cast(grad > 0., dtype) *  tf.cast(op.inputs[0] > 0., dtype)
 
 
-    def compile_saliency_function(self, model, activation_layer='conv7_2'):
+    def compile_saliency_function(self, model, activation_layer='conv8_2'):
 
         input_img = model.input
         layer_dict = dict([(layer.name, layer) for layer in model.layers[1:]])
@@ -251,7 +251,7 @@ class Gradcam:
 #        img.astype('float32')
        # img /= 255.0
         img = cv2.resize(img, (300,300))
-        img = np.expand_dims(img,axis=0)
+        img = np.expand_dims(img, axis=0)
         # preprocessed_input = load_image("/home/seimei/image_0058_brush.jpg")
         predictions=model.predict(img)#np.expand_dims(img, axis=0))
         predicted_class= np.argmax(label_list)# np.argmax(predictions)
@@ -262,7 +262,7 @@ class Gradcam:
         for i in model.layers:
             print('ssssssss',i.name)
 
-        cam, heatmap = self.grad_cam(model, img, predicted_class, "conv7_2", boxcoords)
+        cam, heatmap = self.grad_cam(model, img, predicted_class, "conv8_2", boxcoords)
         cam_ = cv2.resize(cam,(720,405))
 
         # bounding box boords
@@ -277,8 +277,10 @@ class Gradcam:
         #center = (int(round(xmax - xmin + 1) / 2 + xmin), int(round(ymax - ymin + 1) / 2 + ymin))
         top = (int(round(xmin)),int(ymin-1))
         cv2.putText(cam_, label_name, top, font, 0.8, (0,255,0), 2, cv2.LINE_AA)
-
+        cv2.imwrite("./images/cam/cam.jpg",cam)
         cv2.imshow("cam",cam_)
+        
+
         heatmap_ = cv2.resize(heatmap,(720,405))
 
 
@@ -295,7 +297,9 @@ class Gradcam:
 
 #        cv2.imshow('+backprop', gradcam)
         guided_gradcam = cv2.resize(self.deprocess_image(gradcam),(720, 405))#+ np.uint8(reised_img),(720,405))
+        cv2.imwrite("./images/gradcam/gradcam.jpg",guided_gradcam)
         cv2.imshow("guided_gradcam", guided_gradcam)
+
 
 
 
