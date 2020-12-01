@@ -15,10 +15,73 @@ from keras.layers import Reshape
 from keras.layers import ZeroPadding2D
 from keras.models import Model
 
+from keras.layers import Add
+from keras.layers import Dropout
+
 from ssd_layers import Normalize
 from ssd_layers import PriorBox
 
+
+
 from keras.layers import concatenate 
+
+
+def MarkNet(input_shape):
+    
+    net2 = {}
+
+    inputs = Input(shape=input_shape)
+
+    net2['input_m'] = inputs
+    net2['conv1_1m'] = Convolution2D(32, 3,3,
+                                    activation='relu',
+                                    border_mode='same',
+                                    name='conv1_1m')(net2['input_m'])
+
+    net2['conv1_2m'] = Convolution2D(32, 3,3,
+                                    activation='relu',
+                                    border_mode='same',
+                                    name='conv1_2m')(net2['conv1_1m'])
+
+    net2['pool1m'] = MaxPooling2D((2,2),
+                                border_mode='same',
+                                name='pool1m')(net2['conv1_2m'])
+
+    net2['drop1m'] = Dropout(0.25,
+                            name='drop1m')(net2['pool1m'])
+
+    net2['conv2_1m'] = Convolution2D(128, 3,3,
+                                    activation='relu',
+                                    border_mode='same',
+                                    name='conv2_1m')(net2['drop1m'])
+
+    net2['conv2_2m'] = Convolution2D(256, 3,3,
+                                    activation='relu',
+                                    border_mode='same',
+                                    name='conv2_2m')(net2['conv2_1m']) # previous 64ch conv8_2
+
+    net2['pool2m'] = MaxPooling2D((7,7),
+                                border_mode='same',
+                                name='pool2m')(net2['conv2_2m'])
+    ###
+    #  model.add(Conv2D(512, (3, 3), name='conv6_2')) #元々64ch
+    #  model.add(Activation('relu'))
+    #  model.add(MaxPooling2D(pool_size=(2, 2)))
+    ###
+
+    net2['drop2m'] = Dropout(0.25,
+                            name='drop2m')(net2['pool2m'])
+
+    net2['flat1m'] = Flatten(name='flat1m')(net2['drop2m'])
+    net2['dense1m'] = Dense(512, name='dense1m', activation='relu')(net2['flat1m'])
+
+    net2['drop3m'] = Dropout(0.5,
+                            name='drop3m')(net2['dense1m'])
+
+    net2['dense2m'] = Dense(2*6, name='dense2m', activation='softmax')(net2['drop3m'])
+
+    return net2
+
 
 
 def SSD300(input_shape, num_classes=21):
@@ -32,10 +95,15 @@ def SSD300(input_shape, num_classes=21):
     # References
         https://arxiv.org/abs/1512.02325
     """
+
+    net2 = MarkNet(input_shape=(64,64,3))
+
     net = {}
     # Block 1
-    input_tensor = input_tensor = Input(shape=input_shape)
+    input_tensor = Input(shape=input_shape)
+    # prior layerに引数として渡す際利用する
     img_size = (input_shape[1], input_shape[0])
+
     net['input'] = input_tensor
     net['conv1_1'] = Convolution2D(64, 3, 3,
                                    activation='relu',
@@ -103,6 +171,8 @@ def SSD300(input_shape, num_classes=21):
                                    name='conv5_3')(net['conv5_2'])
     net['pool5'] = MaxPooling2D((3, 3), strides=(1, 1), border_mode='same',
                                 name='pool5')(net['conv5_3'])
+
+                                
     # FC6
     net['fc6'] = AtrousConvolution2D(1024, 3, 3, atrous_rate=(6, 6),
                                      activation='relu', border_mode='same',
@@ -112,6 +182,8 @@ def SSD300(input_shape, num_classes=21):
     net['fc7'] = Convolution2D(1024, 1, 1, activation='relu',
                                border_mode='same', name='fc7')(net['fc6'])
     # x = Dropout(0.5, name='drop7')(x)
+
+
     # Block 6
     net['conv6_1'] = Convolution2D(256, 1, 1, activation='relu',
                                    border_mode='same',
@@ -127,6 +199,7 @@ def SSD300(input_shape, num_classes=21):
     net['conv7_2'] = Convolution2D(256, 3, 3, subsample=(2, 2),
                                    activation='relu', border_mode='valid',
                                    name='conv7_2')(net['conv7_2'])
+
     # Block 8
     net['conv8_1'] = Convolution2D(128, 1, 1, activation='relu',
                                    border_mode='same',
@@ -138,7 +211,7 @@ def SSD300(input_shape, num_classes=21):
     # Last Pool 最終出力
     net['pool6'] = GlobalAveragePooling2D(name='pool6')(net['conv8_2'])
 
-
+    from keras.layers import Lambda
     # Prediction from conv4_3
     net['conv4_3_norm'] = Normalize(20, name='conv4_3_norm')(net['conv4_3'])
     num_priors = 3
@@ -255,8 +328,13 @@ def SSD300(input_shape, num_classes=21):
     name = 'pool6_mbox_conf_flat'
     if num_classes != 21:
         name += '_{}'.format(num_classes)
+
     x = Dense(num_priors * num_classes, name=name)(net['pool6'])
-    net['pool6_mbox_conf_flat'] = x
+
+    # Marknetとのmarge
+#    merge = Add()([x, net2['dense2m']])
+
+    net['pool6_mbox_conf_flat'] =x # merge#x
     priorbox = PriorBox(img_size, 276.0, max_size=330.0, aspect_ratios=[2, 3],
                         variances=[0.1, 0.1, 0.2, 0.2],
                         name='pool6_mbox_priorbox')
@@ -292,21 +370,27 @@ def SSD300(input_shape, num_classes=21):
                                   net['conv8_2_mbox_priorbox'],
                                   net['pool6_mbox_priorbox']],
                                  axis=1,name='mbox_priorbox')
+
     if hasattr(net['mbox_loc'], '_keras_shape'):
         num_boxes = net['mbox_loc']._keras_shape[-1] // 4
     elif hasattr(net['mbox_loc'], 'int_shape'):
         num_boxes = K.int_shape(net['mbox_loc'])[-1] // 4
+
     net['mbox_loc'] = Reshape((num_boxes, 4),
                               name='mbox_loc_final')(net['mbox_loc'])
     net['mbox_conf'] = Reshape((num_boxes, num_classes),
                                name='mbox_conf_logits')(net['mbox_conf'])
     net['mbox_conf'] = Activation('softmax',
                                   name='mbox_conf_final')(net['mbox_conf'])
+
+    # 最終出力                              
     net['predictions'] = concatenate([net['mbox_loc'],
                                net['mbox_conf'],
                                net['mbox_priorbox']],
                                axis=2,name='predictions')
+
     model = Model(net['input'], net['predictions'])
+
      # モデルの構造プロット
     keras.utils.plot_model(model, "./ssdmodel.png", show_shapes=True)
     return model
