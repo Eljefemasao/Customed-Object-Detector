@@ -14,79 +14,122 @@ import pandas as pd
 
 
 # MarkNet用のInputPipelineモジュール呼び出し
-from marknet_keras_inputpipeline import CSVSequence, BatchGenerator
-
+from marknet_keras_inputpipeline import BatchGenerator
 # MarkNetモデルの呼び出し
-from model.MarkNet_keras import Model
-
+from model.MarkNet_keras import Model_
 # Gradcamモジュールの呼び出し
 from utils.conduct_gradcam import Gradcam
 
+from utils.combine_multiple_loss import MultiLoss
+from keras import metrics
 
-# 学習・検証用データcsvファイル場所
-DATAPATH='/Users/matsunagamasaaki/MasterResearch/cup_annotation/mark1/data/data.csv'
-VALDATAPATH='/Users/matsunagamasaaki/MasterResearch/cup_annotation/mark1/data/val_data.csv'
+
+# ローカル or リモートサーバー
+position = False
+
+if position:
+    # 学習用データcsvファイル場所
+    DATAPATH='/Users/matsunagamasaaki/MasterResearch/museumPlate_annotation/data2/data/image_data.csv'#'/Users/matsunagamasaaki/MasterResearch/cup_annotation/data1_mark/data/image_data.csv'
+    '/Users/matsunagamasaaki/MasterResearch/cup_annotation/mark1/data/data.csv'
+
+    # 検証用データcsv
+    VALDATAPATH= '/Users/matsunagamasaaki/MasterResearch/museumPlate_annotation/data2/data/image_data.csv'#'/Users/matsunagamasaaki/MasterResearch/cup_annotation/mark1/data/val_data.csv'
+
+else:
+    # 学習用データリモート用
+    REMOTEDATAPATH='/tmp/museumPlate_annotation/data2/data/image_data.csv'
+    DATAPATH = REMOTEDATAPATH
+
+
+    # 検証用データリモート用
+    REMOTEVALDATAPATH= '/tmp/museumPlate_annotation/data2/data/image_data.csv'
+    VALDATAPATH = REMOTEVALDATAPATH
+
 
 FULLIMAGEDATAPATH='/Users/matsunagamasaaki/MasterResearch/cup_annotation/mark1/data/fullimage_data.csv'
 
 best_model_path = './trained_weights/best_model.hdf5'
 final_model_path = './trained_weights/final_model.hdf5'
 
-image_shape = (64, 64, 3)
-batch_size = 64
+image_shape = (300, 300, 3)
+batch_size = 32#64
 
+NUMCLASS=5
 
 def main():
 
     # MarkNetの呼び出し
-    net=Model()
+    net=Model_(input_shape=image_shape)
     model=net.MarkNet()
    
-# initiate RMSprop optimizer
-    opt = keras.optimizers.rmsprop(lr=0.0001, decay=1e-6)
-
-# Let's train the model using RMSprop
-    model.compile(loss='categorical_crossentropy',
+    # initiate RMSprop optimizer
+    #opt = keras.optimizers.rmsprop(lr=0.0001, decay=1e-6)
+    opt= keras.optimizers.Adam(lr=0.0001)
+    # Let's train the model using RMSprop
+    model.compile(loss=MultiLoss(NUMCLASS).compute_loss, #['categorical_crossentropy','categorical_crossentropy']
               optimizer=opt,
-              metrics=['accuracy'])
+              metrics=[metrics.categorical_accuracy])
 
     df_train = pd.read_csv(DATAPATH)
     df_valid = pd.read_csv(VALDATAPATH)
 
     # マークではなく、cupの全貌を収めた画像(検証用)
-    df_fullimage = pd.read_csv(FULLIMAGEDATAPATH)
+#    df_fullimage = pd.read_csv(FULLIMAGEDATAPATH)
     x_train, x_valid, y_train, y_valid = \
-            train_test_split(df_fullimage['image'].tolist(), df_fullimage['label'].tolist(), test_size=0.2, random_state=42)
+            train_test_split(df_train['image'].tolist(), df_train['label'].tolist(), test_size=0.2, random_state=42)
+
+    x_, x_valid, y_, y_valid = \
+            train_test_split(df_valid['image'].tolist(), df_valid['label'].tolist(), test_size=0.2, random_state=42)
     
     df_train = pd.DataFrame({'image':x_train,'label':y_train})
     df_valid = pd.DataFrame({'image':x_valid,'label':y_valid})
 
+    # 検証用に画像番号順に並び替え
+#    df_valid=df_valid.sort_values(by='image',ascending=False)
+
+
     # prepare train and test data sets
     x_train = df_train['image'].tolist()
-    y_train = [ list(np.eye(1, M=2, k=i, dtype=np.int8)[0]) for i in df_train['label'].tolist()]
+    y_train = [ list(np.eye(1, M=NUMCLASS, k=i, dtype=np.int8)[0]) for i in df_train['label'].tolist()]
     x_test = df_valid['image'].tolist()
-    y_test = [ list(np.eye(1, M=2, k=i, dtype=np.int8)[0]) for i in df_valid['label'].tolist()]
+    y_test = [ list(np.eye(1, M=NUMCLASS, k=i, dtype=np.int8)[0]) for i in df_valid['label'].tolist()]
 
   
     # ジェネレーターの呼び出し
     train_batch_generator = BatchGenerator(x_train, y_train, image_shape, batch_size)
     test_batch_generator = BatchGenerator(x_test, y_test, image_shape, batch_size)
 
+
     # start training
     chk_point = keras.callbacks.ModelCheckpoint(filepath = best_model_path, monitor='val_loss',
                                                 verbose=1, save_best_only=True, save_weights_only=True,
                                                 mode='min', period=1)
 
-    """
-    fit_history = model.fit_generator(train_batch_generator, epochs=15,
+
+
+    fit_history = model.fit_generator(train_batch_generator, epochs=1,
                                     steps_per_epoch=train_batch_generator.batches_per_epoch,
                                     verbose=1,
                                     validation_data=test_batch_generator,
                                     validation_steps=test_batch_generator.batches_per_epoch,
                                     shuffle=True,
                                     callbacks=[chk_point])
+    
     model.save(final_model_path)
     #model.save_weights('marknet_finalconv.hdf5', save_weights_only=True)
+
+    import coremltools
+    model.author = 'm.matsunaga'
+    model.short_description = 'urasoe museum plate recognition'
+    #model.input_description['image'] = 'take a input an image of a plate'
+    #model.output_description['output'] = 'prediction of plate'
+
+    output_labels = ['0','1','2','3','4']
+    mlconverted_model = coremltools.converters.keras.convert(model)
+
+
+    mlconverted_model.save('./trained_weights/best_model.mlmodel')
+
     """
 
     # モデルの学習済み重み呼び出し
@@ -102,28 +145,30 @@ def main():
 
     for i in range(1000):
         # テスト画像
-        img = load_img(x_test[i], target_size=(64,64))
+        img = load_img(x_test[i])#, target_size=(64,64))
+        print("path", x_test[i])
         img = tf.keras.preprocessing.image.img_to_array(img)
 
-        # 入力画像の回転-90d
-      #  img = apply_affine_transform(img, channel_axis=2, theta=-90, fill_mode="nearest", cval=0.)
-        expanded_img = np.expand_dims(img, 0)
+        # numpy array to tensor に変換
+        tensor_img = tf.convert_to_tensor(img, dtype=tf.float32)
+        tensor_img = tf.image.resize_with_crop_or_pad(image=tensor_img, target_height=image_shape[0], target_width=image_shape[1])
+        with tf.Session() as sess:
+            img = sess.run(tensor_img)
 
+        # 入力画像の回転-90d
+        #img = apply_affine_transform(img, channel_axis=2, theta=-90, fill_mode="nearest", cval=0.)
+        expanded_img = np.expand_dims(img, 0)
         output = model.predict(expanded_img, batch_size=1, verbose=1)
-        
-        gradcam.conduct_gradcam(model,img)
+
+        # Gradcam オリジナル画像可視化用
+        img = cv2.imread(x_test[i])        
+        gradcam.conduct_gradcam(model, img, image_shape=image_shape)
         print('model:',output)
         print('GL:', y_test[i])
         print('===============')
-        cv2.waitKey(1)
+        cv2.waitKey(20)
 
-
-
-
-    
-
-
-
+    """
 
 if __name__ == "__main__":
     main()
