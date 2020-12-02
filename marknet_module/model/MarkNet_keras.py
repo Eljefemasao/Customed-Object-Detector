@@ -41,12 +41,12 @@ class Model_:
         net2['drop1m'] = Dropout(0.25,
                                 name='drop1m')(net2['pool1m'])
 
-        net2['conv2_1m'] = Convolution2D(128, 3,3,
+        net2['conv2_1m'] = Convolution2D(64, 3,3, # kernel was 128 for including to ssd
                                         activation='relu',
                                         border_mode='same',
                                         name='conv2_1m')(net2['drop1m'])
         
-        net2['conv2_2m'] = Convolution2D(256, 3,3,
+        net2['conv2_2m'] = Convolution2D(64, 3,3, # kernel was 256 for including to ssd
                                         activation='relu',
                                         border_mode='same',
                                         name='conv8_2')(net2['conv2_1m']) # previous 64ch
@@ -69,7 +69,7 @@ class Model_:
         net2['drop3m'] = Dropout(0.5,
                                 name='drop3m')(net2['dense1m'])
         
-        net2['dense2m'] = Dense(2, name='dense2m', activation='softmax')(net2['drop3m'])
+        net2['dense2m'] = Dense(5, name='dense2m', activation='softmax')(net2['drop3m'])
 
         model = Model(net2['input_m'], net2['dense2m'])
 
