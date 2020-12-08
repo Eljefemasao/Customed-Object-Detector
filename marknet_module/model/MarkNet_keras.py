@@ -17,13 +17,65 @@ from keras.layers import concatenate
 
 import numpy as np
 
+
 class Model_:
 
     def __init__(self, input_shape):
         self.input_shape = input_shape
-    
 
     def MarkNet(self):
+
+        # モデル
+        net2 = {}
+
+        inputs = Input(shape=self.input_shape)
+
+        net2['input_m'] = inputs
+        net2['conv1_1m'] = Convolution2D(32, 3, 3,
+                                         activation='relu',
+                                         border_mode='same',
+                                         name='conv1_1m')(net2['input_m'])
+
+        net2['conv1_2m'] = Convolution2D(32, 3, 3,
+                                         activation='relu',
+                                         border_mode='same',
+                                         name='conv1_2m')(net2['conv1_1m'])
+
+        net2['pool1m'] = MaxPooling2D((2, 2),
+                                      border_mode='same',
+                                      name='pool1m')(net2['conv1_2m'])
+
+        net2['drop1m'] = Dropout(0.25,
+                                 name='drop1m')(net2['pool1m'])
+
+        net2['conv2_1m'] = Convolution2D(5, 3, 3,  # kernel was 128 for including to ssd
+                                         activation='relu',
+                                         border_mode='same',
+                                         name='conv2_1m')(net2['drop1m'])
+
+        net2['pool2m'] = MaxPooling2D((2, 2),
+                                      border_mode='same',
+                                      name='pool2m')(net2['conv2_1m'])
+
+        net2['drop2m'] = Dropout(0.25,
+                                 name='drop2m')(net2['pool2m'])
+
+        net2['flat1m'] = Flatten(name='flat1m')(net2['drop2m'])
+
+        net2['dense1m'] = Dense(512, name='dense1m', activation='relu')(net2['flat1m'])
+
+        net2['drop3m'] = Dropout(0.5,
+                                 name='drop3m')(net2['dense1m'])
+
+        net2['dense2m'] = Dense(5, name='prediction_branch', activation='softmax')(net2['drop3m'])
+
+        model = Model(inputs=net2['input_m'], outputs=net2['dense2m'])
+
+        return model
+
+
+
+    def AttentionMarkNet(self):
 
         # モデル
         net2 = {}
