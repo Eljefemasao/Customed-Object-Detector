@@ -30,7 +30,7 @@ from keras.utils import plot_model
 position = True
 
 # 学習データディレクトリ
-DATA_DIRECTORY = 'museumPlate_annotation'
+DATA_DIRECTORY = 'museumSquarePlate_annotation'
 
 if position:
     # 学習用データcsvファイル場所
@@ -80,6 +80,8 @@ def convert_keras_model_to_coreml_model(model):
 
     return None
 
+
+
 def prepare_multiple_category_outputs(model , i, gradcam):
     """
     Plate_A, Plate_B, Plate_Cの画像を同時にGradcamで可視化するため、入力画像を用意する関数
@@ -88,8 +90,13 @@ def prepare_multiple_category_outputs(model , i, gradcam):
     :param gradcam: Gradcamモジュール
     :return: None
     """
+    def concat_vh(list_2d):
+        # return final image
+        return cv2.vconcat([cv2.hconcat(list_h)
+                            for list_h in list_2d])
 
     categories = ['a', 'b', 'c']
+    horizontal_imgs = []
     for category in categories:
         path = '/Users/matsunagamasaaki/MasterResearch/'+DATA_DIRECTORY+'/test_csvs/image_data_'+category+'.csv'
         df = pd.read_csv(path)
@@ -112,10 +119,16 @@ def prepare_multiple_category_outputs(model , i, gradcam):
 
         # Gradcam オリジナル画像可視化用
         img = cv2.imread(x_test[i])
-        gradcam.conduct_gradcam(model, img, image_shape=image_shape, category=category)
+        im_h = gradcam.conduct_gradcam(model, img, image_shape=image_shape, category=category)
+        horizontal_imgs.append(im_h)
         print('model:', output)
         print('GL:', y_test[i])
         print('===============')
+
+    im_h = concat_vh([[horizontal_imgs[0]],
+                     [horizontal_imgs[1]],
+                     [horizontal_imgs[2]]])
+    cv2.imshow('Attention/ Class Activation Map', im_h)
 
     return None
 
@@ -124,8 +137,8 @@ def main():
     # MarkNetの呼び出し
     net = Model_(input_shape=image_shape)
     #model = net.MarkNet()
-    #model = net.AttentionMarkNet()
-    model = net.WhiteAttenuation_And_AttentionMarkNet()
+    model = net.AttentionMarkNet()
+    #model = net.WhiteAttenuation_And_AttentionMarkNet()
 
     # モデル図の可視化
     plot_model(model, to_file='model.png', show_shapes=True)
@@ -196,9 +209,9 @@ def main():
     # モデルの学習済み重み呼び出し
     #model.load_weights('./trained_weights/best_model.hdf5')
     # attention モデル for square plate
-    #model.load_weights('./trained_weights/attention_best_model_for_squarePlate.hdf5')
+    model.load_weights('./trained_weights/attention_best_model_for_squarePlate.hdf5')
     # attenuation モデル for plate
-    model.load_weights('./trained_weights/attenuation_and_attention_best_model_for_plate.hdf5')
+    #model.load_weights('./trained_weights/attenuation_and_attention_best_model_for_plate.hdf5')
 
     # モデルの構造サマリ
     model.summary()
@@ -211,8 +224,8 @@ def main():
 
     for i in range(1000):
         prepare_multiple_category_outputs(model=model, i=i, gradcam=gradcam)
-        cv2.waitKey(3000)
-        #cv2.waitKey(30)
+        #cv2.waitKey(3000)
+        cv2.waitKey(200)
 
 
 
