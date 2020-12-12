@@ -8,6 +8,10 @@ import tensorflow as tf
 
 
 def create_binary_map(img, fmap):
+    """
+    単純なマスク画像の生成
+    convert gray-scale to binary image 
+    """
 
     feature_map_shape = fmap.shape
     img = cv2.resize(img, (feature_map_shape[1], feature_map_shape[2]))*255
