@@ -1,13 +1,19 @@
-"""SSD training utils."""
+
+# summarze perception and attention branch network's
+# both categorical cross entropy 
+#
+
 
 import tensorflow as tf
 import numpy as np
 from keras.losses import  mean_squared_error
 
 class MultiLoss(object):
+    
     """
     summarize both categorical cross entropy (prediction branch/ attention branch)
     """
+    
     def __init__(self, num_classes):
         self.num_classes = num_classes
 
