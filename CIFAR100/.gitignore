@@ -1,0 +1,12 @@
+
+cifar-100-python/
+cifar100/
+config_files/
+data/
+plot_pkl_data/
+preprocessed_csv_data/
+get_train_plot.py~
+get_cifar100_image.py~
+make_cifar100_dataset.py~
+tmp.py
+tmp.py~
